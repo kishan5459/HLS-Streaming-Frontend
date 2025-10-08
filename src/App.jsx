@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Copy, Trash2, AlertCircle, CheckCircle, Loader, X, LogOut, User as UserIcon } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 
-
+// Main App Component
 const App = () => {
   const { user, isLoaded } = useUser();
   const [selectedFile, setSelectedFile] = useState(null);
@@ -327,7 +327,7 @@ const App = () => {
       if (result.success) {
         setSuccess('Video deleted successfully!');
         // Remove from local state
-        setAllVideos(allVideos.filter(v => v.folder !== videoId));
+        setAllVideos(allVideos.filter(v => v.videoId !== videoId));
         
         // If the deleted video is currently playing, clear it
         if (videoData?.videoId === videoId) {
@@ -344,30 +344,16 @@ const App = () => {
   };
 
   const handleViewVideo = (video) => {
-    // Find the master playlist URL (usually ends with .m3u8 and contains "master")
-    const masterUrl = video.url.find(url => 
-      url.includes('.m3u8') && (url.includes('master') || url.includes('playlist'))
-    ) || video.url.find(url => url.includes('.m3u8'));
-
-    if (!masterUrl) {
+    if (!video.masterUrl) {
       setError('No valid HLS playlist found for this video');
       return;
     }
 
-    // Extract variant URLs if available
-    const variantUrls = {};
-    video.url.forEach(url => {
-      if (url.includes('360p')) variantUrls['360p'] = url;
-      if (url.includes('480p')) variantUrls['480p'] = url;
-      if (url.includes('720p')) variantUrls['720p'] = url;
-      if (url.includes('1080p')) variantUrls['1080p'] = url;
-    });
-
     setVideoData({
-      masterUrl,
-      variantUrls,
-      videoId: video.folder,
-      videoPath: `hls_videos/${video.folder}`
+      masterUrl: video.masterUrl,
+      variantUrls: video.variantUrls || {},
+      videoId: video.videoId,
+      videoPath: `hls_videos/${video.videoId}`
     });
 
     setShowTestData(false);
@@ -377,6 +363,37 @@ const App = () => {
     setTimeout(() => {
       document.querySelector('.video-js')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
+  };
+
+  // Generate unique gradient for each video based on videoId
+  const getGradientForVideo = (videoId) => {
+    const gradients = [
+      'from-blue-400 via-purple-500 to-pink-500',
+      'from-green-400 via-teal-500 to-blue-500',
+      'from-orange-400 via-red-500 to-pink-500',
+      'from-purple-400 via-pink-500 to-red-500',
+      'from-cyan-400 via-blue-500 to-purple-500',
+      'from-yellow-400 via-orange-500 to-red-500',
+      'from-indigo-400 via-purple-500 to-pink-500',
+      'from-teal-400 via-green-500 to-blue-500',
+      'from-rose-400 via-pink-500 to-purple-500',
+      'from-lime-400 via-green-500 to-teal-500',
+    ];
+    
+    // Use videoId to consistently select the same gradient
+    let hash = 0;
+    for (let i = 0; i < videoId.length; i++) {
+      hash = videoId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % gradients.length;
+    return gradients[index];
+  };
+
+  const getVideoThumbnail = (videoFolderId) => {
+    // Generate Cloudinary video thumbnail URL
+    // This assumes your video source is stored in Cloudinary
+    // Format: https://res.cloudinary.com/{cloud_name}/video/upload/{folder_path}/{video_id}.jpg
+    return `https://res.cloudinary.com/${import.meta.env.CLOUDINARY_CLOUD_NAME || 'demo'}/video/upload/hls_videos/${videoFolderId}/thumbnail.jpg`;
   };
 
   // Loading state
@@ -557,29 +574,43 @@ const App = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {allVideos.map((video) => (
                   <div
-                    key={video.folder}
+                    key={video.videoId}
                     className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200"
                   >
-                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative group">
-                      <Play className="w-12 h-12 text-gray-400" />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-                        <button
-                          onClick={() => handleViewVideo(video)}
-                          className="opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 px-4 py-2 bg-white text-gray-900 rounded-lg font-medium"
-                        >
-                          Watch Video
-                        </button>
+                    <div className="aspect-video bg-gradient-to-br from-blue-50 to-purple-50 relative group overflow-hidden cursor-pointer"
+                         onClick={() => handleViewVideo(video)}>
+                      {/* Video Icon */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200">
+                          <Play className="w-10 h-10 text-white ml-1" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-600 px-4 text-center truncate max-w-full">
+                          {video.videoId}
+                        </p>
+                      </div>
+                      
+                      {/* Hover Overlay */}
+                      <div
+                        className={`
+                          absolute inset-0 
+                          bg-gradient-to-br ${getGradientForVideo(video.videoId)} 
+                          opacity-0 group-hover:opacity-80 
+                          transition-all duration-300
+                          mix-blend-multiply
+                        `}
+                      ></div>
+                      
+                      {/* HLS Badge */}
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-blue-600 rounded text-white text-xs font-medium">
+                        HLS
                       </div>
                     </div>
                     
                     <div className="p-4">
-                      <h3 className="font-medium text-gray-900 mb-2 truncate" title={video.folder}>
-                        {video.folder}
+                      <h3 className="font-medium text-gray-900 mb-2 truncate" title={video.videoId}>
+                        {video.videoId}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-3">
-                        {video.url.length} file{video.url.length !== 1 ? 's' : ''}
-                      </p>
-                      
+
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewVideo(video)}
@@ -589,11 +620,11 @@ const App = () => {
                           Play
                         </button>
                         <button
-                          onClick={() => handleDeleteVideo(video.folder)}
-                          disabled={deletingVideoId === video.folder}
+                          onClick={() => handleDeleteVideo(video.videoId)}
+                          disabled={deletingVideoId === video.videoId}
                           className="inline-flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-all duration-200"
                         >
-                          {deletingVideoId === video.folder ? (
+                          {deletingVideoId === video.videoId ? (
                             <Loader className="w-4 h-4 animate-spin" />
                           ) : (
                             <Trash2 className="w-4 h-4" />

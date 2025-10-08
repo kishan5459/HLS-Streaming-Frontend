@@ -70,3 +70,13 @@ HLS Player is a React-based frontend for streaming and managing videos in **HLS 
 * **Video Streaming:** HLS via Video.js
 * **File Uploads:** HTML file input & drag-and-drop
 * **HTTP Client:** Axios
+
+## 🎥 Demo Video
+
+[Watch the demo](https://drive.google.com/file/d/1onBHhkpTbl9LzQCd3dgHPJzNOQNugrn4/view?usp=drive_link)
+
+change quality to 720p and increase speed(if you need) for better experience while playing video
+
+while recording dropdown menu to change video quality is not recorded by recorder so there is image of that
+
+[Image of Video with dropdown](https://drive.google.com/file/d/1UpkDMg66BGkWd7coOLmv1Y3rhQMAmd-5/view?usp=drive_link) 
